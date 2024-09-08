@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Tracker</title>
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        section {
+            margin-bottom: 30px;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #balance-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        #transaction-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        label {
+            width: 100px;
+        }
+
+        input, select {
+            width: 200px;
+            height: 35px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            --color: #e72020;
+            font-family: inherit;
+            display: inline-block;
+            padding: 10px 20px;
+            position: relative;
+            cursor: pointer;
+            border: 2px solid var(--color);
+            transition: color 0.5s;
+            z-index: 1;
+            font-size: 17px;
+            border-radius: 6px;
+            font-weight: 500;
+            color: var(--color);
+        }
+
+        button:hover {
+            color: #fff;
+            background-color: var(--color);
+        }
+
+        button:active {
+            background-color: #a30c0c;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Money Tracker</h1>
+    </header>
+    <main>
+        <section id="income">
+            <h2>Income</h2>
+            <table id="income-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Source</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="income-data">
+                </tbody>
+            </table>
+        </section>
+
+        <section id="expenses">
+            <h2>Expenses</h2>
+            <table id="expenses-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Category</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="expenses-data">
+                </tbody>
+            </table>
+        </section>
+
+        <section id="balance">
+            <h2>Balance</h2>
+            <p id="balance-amount">$0.00</p>
+        </section>
+
+        <section id="add-transaction">
+            <h2>Add Transaction</h2><br>
+            <form id="transaction-form">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date"><br><br>
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" name="amount"><br><br>
+                <label for="category">Category:</label>
+                <select id="category" name="category">
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                </select><br><br>
+                <label for="source">Source:</label>
+                <input type="text" id="source" name="source"><br><br>
+                <button id="submit-btn">Add Transaction</button>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        const incomeTable = document.getElementById('income-table');
+        const expensesTable = document.getElementById('expenses-table');
+        const balanceElement = document.getElementById('balance-amount');
+        const transactionForm = document.getElementById('transaction-form');
+        const submitButton = document.getElementById('submit-btn');
+
+        let incomeData = [];
+        let expensesData = [];
+
+        transactionForm.addEventListener('submit', function(event) {
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            fetch('/addTransaction', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Transaction added successfully');
+                } else {
+                    alert('Error adding transaction');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+        
+        function addTransaction(event) {
+            event.preventDefault();
+            const date = document.getElementById('date').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const source = document.getElementById('source').value;
+
+            if (category === 'income') {
+                const id = new Date().getTime(); 
+                incomeData.push({ id, date, amount, source });
+                updateIncomeTable();
+            } else {
+                const id = new Date().getTime();
+                expensesData.push({ id, date, amount, source });
+                updateExpensesTable();
+            }
+
+            updateBalance();
+            transactionForm.reset();
+        }
+
+        function updateIncomeTable() {
+            const incomeTableBody = document.getElementById('income-data');
+            incomeTableBody.innerHTML = '';
+            incomeData.forEach((transaction) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.date}</td>
+                    <td>$${transaction.amount.toFixed(2)}</td>
+                    <td>${transaction.source}</td>
+                    <td><button onclick="deleteIncome(${transaction.id})">Delete</button></td>
+                `;
+                incomeTableBody.appendChild(row);
+            });
+        }
+
+        function updateExpensesTable() {
+            const expensesTableBody = document.getElementById('expenses-data');
+            expensesTableBody.innerHTML = '';
+            expensesData.forEach((transaction) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.date}</td>
+                    <td>$${transaction.amount.toFixed(2)}</td>
+                    <td>${transaction.source}</td>
+                    <td><button onclick="deleteExpense(${transaction.id})">Delete</button></td>
+                `;
+                expensesTableBody.appendChild(row);
+            });
+        }
+
+        function deleteIncome(id) {
+            incomeData = incomeData.filter(transaction => transaction.id !== id);
+            updateIncomeTable();
+            updateBalance();
+        }
+
+        function deleteExpense(id) {
+            expensesData = expensesData.filter(transaction => transaction.id !== id);
+            updateExpensesTable();
+            updateBalance();
+        }
+
+        function updateBalance() {
+            const totalIncome = incomeData.reduce((sum, transaction) => sum + transaction.amount, 0);
+            const totalExpenses = expensesData.reduce((sum, transaction) => sum + transaction.amount, 0);
+            const balance = totalIncome - totalExpenses;
+            balanceElement.textContent = `$${balance.toFixed(2)}`;
+        }
+
+        submitButton.addEventListener('click', addTransaction);
+    </script>
+</body>
+</html>
